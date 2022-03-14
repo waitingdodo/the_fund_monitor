@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+
+<head>
+    <!-- <link href="bootstrap-3.3.0-dist/dist/css/bootstrap.min.css" rel="stylesheet" /> -->
+
+    <!-- <link href="bootstrap-3.3.0-dist/dist/css/bootstrap-responsive.min.css" rel="stylesheet" /> -->
+    <!--datatables的样式文件，我修改了其默认分页按钮的样式，所以加了后缀itoo ，和官网下载的不一样-->
+    <!-- <link href="bootstrap-3.3.0-dist/dist/css/jquery.dataTables-itoo.css" rel="stylesheet" /> -->
+
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+
+
+    <!-- <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script> -->
+    <script src="https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js"></script>
+
+
+    <!-- <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" /> -->
+    <!-- <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.0/js/bootstrap.min.js"></script> -->
+
+    <link href="https://cdn.staticfile.org/twitter-bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet"/>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.0/js/bootstrap.min.js"></script>
+
+
+    <link href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" rel="stylesheet"/>
+    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+
+    <link href="https://cdn.bootcdn.net/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+
+</head>
+
+<body>
+<div class="row-fluid" style="margin-top: 20px">
+    <div class="span1"></div>
+    <div class="span10">
+        <table cellspacing="0" class="row-border hover order-column" id="table_local" width="100%">
+            <thead>
+            <tr>
+                <th>基金代号</th>
+                <th>基金名称</th>
+                <th>基金类别</th>
+                <th>估值涨幅</th>
+
+                <th>200日温度</th>
+                <th>100日温度</th>
+
+                <th>股票比例</th>
+                <th>总资产</th>
+
+                <th>资产规模</th>
+
+
+                <th>标签</th>
+                <th>更新时间</th>
+
+                <th>选证能力</th>
+                <th>收益率</th>
+                <th>抗风险</th>
+                <th>稳定性</th>
+                <th>择时能力</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+
+</body>
+
+<script type="text/javascript">
+    var table;
+    var funds_dict = {};
+
+
+    $(document).ready(getData)
+
+
+
+    function getData() {
+
+        $.ajax({
+            url: `http://localhost:8080/getFund`,
+            async: true,
+            type: "GET",
+            headers: {
+                "Content-Type": "application/json;charset=utf8",
+                "Access-Control-Allow-Origin": "*"
+            },
+
+            //                 ajaxGridOptions: {
+            //                     xhrFields: {
+            //                         withCredentials: true
+            //                     }
+            //                 },
+            crossDomain: true,
+            beforeSend: function (xhr) {
+
+            },
+            success: function (result, status, xhr) {
+
+                funds_dict = JSON.parse(result)
+
+
+                initTable(funds_dict);
+            },
+            error: function (xhr, status, error) {
+                // $("#div1").html(result);
+                alert("错误提示： " + xhr.status + " " + xhr.statusText);
+            },
+
+            complete: function (xhr, status) {
+
+            }
+        });
+    }
+
+    function updateColor(ori_fundDataArray) {
+        fundDataArrayWithColor = [];
+        var copy_fundDataArray = JSON.parse(JSON.stringify(ori_fundDataArray));
+        for (i in copy_fundDataArray) {
+            the_obj = copy_fundDataArray[i]
+            var gszzl = parseFloat(the_obj["gszzl"])
+            var money = parseFloat(the_obj["money"])
+
+            var up_color = ["#ddffdd", "#bbffbb", "#99ff99", "#90ee90", "#22aa22"]
+            var down_color = ["#ffdddd", "#ffbbbb", "#ff9999", "#ee9090", "#aa2222"]
+            var select_color = "#ffffff"
+
+            // 用于标识总资产的背景色
+            var select_color_for_money = "#ffffff"
+
+            if (gszzl < -5) {
+                select_color = down_color[4]
+
+            }
+
+            if (-5 <= gszzl && gszzl < -3) {
+                select_color = down_color[3]
+            }
+
+            if (-3 <= gszzl && gszzl < -2) {
+                select_color = down_color[2]
+            }
+
+            if (-2 <= gszzl && gszzl < -1) {
+                select_color = down_color[1]
+            }
+
+            if (-1 <= gszzl && gszzl < -0.5) {
+                select_color = down_color[0]
+            }
+
+            if (0.5 <= gszzl && gszzl < 1) {
+                select_color = up_color[0]
+            }
+
+            if (1 <= gszzl && gszzl < 2) {
+                select_color = up_color[1]
+            }
+
+            if (2 <= gszzl && gszzl < 3) {
+                select_color = up_color[2]
+            }
+
+            if (3 <= gszzl && gszzl < 5) {
+                select_color = up_color[3]
+            }
+
+            if (gszzl > 5) {
+                select_color = up_color[4]
+
+            }
+
+            if (money < 1) {
+                select_color_for_money = down_color[1]
+
+            }
+
+            the_obj["gszzl"] = `<span style="padding:8px;background:${select_color}"> ${the_obj["gszzl"]} </span>`;
+            the_obj["money"] = `<span style="padding:8px;background:${select_color_for_money}">  ${the_obj["money"]} </span>`;
+
+
+            var fund_id = the_obj["fundcode"]
+
+            the_obj["tags"] = `<span style="padding:8px;"> <span> ${the_obj["tags"]}</span> <i style="color:Dodgerblue;paddingLeft:8px;cursor:hand;" class="fa fa-edit fa-lg edit_tags_btn" fund_id_data="${fund_id}" ></i></span>`;
+
+            // onclick = "show_prompt('${fund_id}')"
+
+            fundDataArrayWithColor.push(the_obj)
+        }
+        return fundDataArrayWithColor
+    }
+
+
+
+    function show_prompt(fund_id, onSuccess) {
+        var the_fund_base_info = funds_dict[fund_id];
+        var fund_name = the_fund_base_info["name"];
+        var old_tags = the_fund_base_info["tags"];
+
+        var new_tags = prompt(`修改 <${fund_name}> 的标签(以空格分隔)`, old_tags)
+        if (new_tags == null || new_tags == old_tags) {
+            return;
+        }
+
+
+        $.ajax({
+            url: `http://localhost:8080/editTags?fund_id=${fund_id}&new_tags=${new_tags}`,
+            async: true,
+            type: "GET",
+
+            success: function (result, status, xhr) {
+
+                // alert(`修改成功: ${xhr.status},  ${xhr.statusText}, ${result}`);
+                toastr.success(`修改成功: ${result}, ${xhr.status},  ${xhr.statusText}`)
+
+                the_fund_base_info["tags"] = new_tags;
+                refresh_table(funds_dict);
+                onSuccess()
+            },
+
+            error: function (xhr, status, error) {
+
+                alert(`错误提示: ${xhr.status}, ${xhr.statusText}`);
+            }
+        })
+    }
+
+    function refresh_table(funds_dict) {
+
+        var ori_fundDataArray = Object.values(funds_dict);
+        var fundDataArray = updateColor(ori_fundDataArray);
+
+        // //清理原数据
+        // table.clear();
+        // //添加新数据
+        // table.rows.add(fundDataArray).draw();
+
+        // realTable.page(currentPage).draw( false );  
+    }
+
+    function initTable(funds_dict) {
+
+        var ori_fundDataArray = Object.values(funds_dict);
+        var fundDataArray = updateColor(ori_fundDataArray);
+        // console.log("initTable:" + JSON.stringify(fundDataArray));
+
+        var lastIdx = null;
+        //datatables表格初始化方法
+        table = $("#table_local").DataTable({
+
+            data: fundDataArray,
+            //绑定列数据，名字和json串里的key相同，只有这里绑定了表格中才会显示数据
+            columns: [
+                {
+                    data: "fundcode"
+                },
+                {
+                    data: "name"
+                },
+                {
+                    data: "type"
+                },
+                {
+                    data: "gszzl"
+                },
+
+                {
+                    data: "guzhi_vp_rate"
+                },
+
+                {
+                    data: "jinzhi_vp_rate"
+                },
+
+
+                {
+                    data: "stock_rate"
+                },
+
+                {
+                    data: "money"
+                },
+
+
+                {
+                    data: "zcgm"
+                },
+
+                {
+                    data: "tags"
+                },
+                {
+                    data: "gztime"
+                },
+
+                {
+                    data: "select_stock"
+                },
+
+                {
+                    data: "yield_rate"
+                },
+                {
+                    data: "anti_risk"
+                },
+                {
+                    data: "stability"
+                },
+                {
+                    data: "select_time"
+                }
+            ],
+            //打开数据加载时的等待效果
+            processing: true,
+            //打开后台分页  会有问题
+            // serverSide: true,
+            //是否启用排序
+            ordering: true,
+            //是否  启用模糊搜索
+            searching: true,
+            //当处理大数据时，延迟渲染数据，有效提高Datatables处理能力
+            // deferRender: true,
+            //国际化设置（设置中文显示）
+            language: {
+                lengthMenu: '<div style="float:left;height:33px;line-height:33px;overflow:hidden;text-align:center" >每页条数：</div><div style="float:left"><select class="form-control input-xsmall" style="float:right">' +
+                    '<option value="1">1</option>' +
+                    '<option value="5">5</option>' +
+                    '<option value="10">10</option>' +
+                    '<option value="20">20</option>' +
+                    '<option value="30">30</option>' +
+                    '<option value="40">40</option>' +
+                    '<option value="50">50</option>' +
+                    "</select></div>", //左上角的分页大小显示。
+
+                search: '<span class="label label-success">搜索：</span>', //右上角的搜索文本，可以写html标签
+
+                paginate: {
+                    //分页的样式内容。
+                    previous: "上一页",
+                    next: "下一页",
+                    first: "第一页",
+                    last: "最后",
+                },
+
+                //table tbody内容为空时，tbody的内容。
+                zeroRecords: "没有内容",
+                //下面三者构成了总体的左下角的内容。
+                //左下角的信息显示，大写的词为关键字。
+                info: "共_PAGES_ 页，显示第_START_ 到第 _END_ ，共_MAX_ 条 ",
+                infoEmpty: "0条记录", //筛选为空时左下角的显示。
+                infoFiltered: "", //筛选之后的左下角筛选提示，
+            },
+            paging: true,
+            pagingType: "full_numbers", //分页样式的类型full_numbers
+        });
+
+        //右上角的默认搜索文本框，不写这个就超出去了。
+        $("#table_local_filter input[type=search]").css({
+            width: "auto",
+        });
+
+        //鼠标经过时高亮
+        $("#table_local tbody").on("mouseover", "td", function () {
+            var colIdx = table.cell(this).index().column;
+            if (colIdx !== lastIdx) {
+                $(table.cells().nodes()).removeClass("highlight");
+                $(table.column(colIdx).nodes()).addClass("highlight");
+            }
+        })
+            .on("mouseleave", function () {
+                $(table.cells().nodes()).removeClass("highlight");
+            });
+
+        //点击某行后高亮
+        // $("#table_local tbody").on("click", "tr", function () {
+        //     if ($(this).hasClass("selected")) {
+        //         $(this).removeClass("selected");
+        //     } else {
+        //         table.$("tr.selected").removeClass("selected");
+        //         $(this).addClass("selected");
+        //     }
+        // });
+
+        $("#table_local tbody").on("click", ".edit_tags_btn", function () {
+            var fund_id = $(this).attr("fund_id_data");
+            var btn = $(this);
+            onSuccess = function () {
+                var the_fund_base_info = funds_dict[fund_id];
+                var new_tags = the_fund_base_info["tags"];
+
+                aa = btn.parent().text();
+                bb = btn.parent().html();
+                cc = btn.prev().text();
+                dd = btn.prev().html();
+
+                // 修改前一个元素的值, 也就是tags的值
+                btn.prev().text(new_tags);
+            }
+
+
+            show_prompt(fund_id, onSuccess);
+        })
+
+        //鼠标双击事件，弹出提示。
+        $("#table_local tbody").on("dblclick", "tr", function () {
+            //获取该行数据
+            var data = table.row(this).data();
+            //做一些其他操作
+        });
+    };
+
+
+
+
+
+
+
+</script>
