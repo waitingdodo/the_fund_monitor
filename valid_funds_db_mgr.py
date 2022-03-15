@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# _*_ coding: utf-8 _*_
+# @Time : 2022/3/14 21:23
+# @Author : dodo
+# @Version：V 0.1
+# @desc :  对数据库funds.db进行管理
+
 import os
 import sqlite3
 
@@ -7,6 +14,12 @@ db_name: str = 'funds.db'
 
 
 def update_tags(fund_id: str, new_tags_str: str):
+    """
+    更新标签并提交到数据库
+    :param fund_id:
+    :param new_tags_str:
+    :return:
+    """
     conn = sqlite3.connect(db_name)
     c = conn.cursor()
     print(f"UPDATE valid_funds SET tags = '{new_tags_str}' where fund_id = '{fund_id}'")
@@ -16,7 +29,7 @@ def update_tags(fund_id: str, new_tags_str: str):
     conn.close()
 
 
-def get_all_valid_funds_dict() -> dict:
+def get_all_valid_funds_info_dict() -> dict:
     valid_funds_list: list = get_all_valid_funds_info_list()
     # 字典必须保证顺序
     valid_funds_list.sort(key=sort_key)
@@ -88,9 +101,11 @@ def get_all_valid_funds_info_list() -> list[dict]:
     return valid_funds_list
 
 
-def export_valid_funds_list_db2file():
-    # 从数据库中导出类似于valid_funds.json结构的文件, 按照fund_id排序
-
+def tool_export_valid_funds_list_db2file():
+    """
+    从数据库中导出类似于valid_funds.json结构的文件, 按照fund_id排序
+    :return:
+    """
     valid_funds_list: list = get_all_valid_funds_info_list()
     valid_funds_list.sort(key=sort_key)
 
@@ -126,8 +141,11 @@ def sort_key(elem: list):
     return elem[0]
 
 
-def import_valid_funds_data_file2db():
-    # 将数据从文件导入到数据库
+def tool_import_valid_funds_data_file2db():
+    """
+    将数据从文件导入到数据库
+    :return:
+    """
     valid_funds_dict = read_json_file("./json/valid_funds.json")
     data_list_will_import_to_db: list = []
     for the_fund_id, the_base_data in valid_funds_dict.items():
@@ -230,32 +248,11 @@ def create_table_valid_funds():
     conn.close()
 
 
-def create_table_funds_detail():
-    # 创建一个名为funds_detail.db的数据库
-    conn: sqlite3.Connection = sqlite3.connect('funds_detail.db')
-    print("Opened database successfully")
-
-    c: sqlite3.Cursor = conn.cursor()
-    # CODE 基金代号
-    # NAME 基金名称
-    c.execute('''CREATE TABLE funds_detail
-               (id            INTEGER PRIMARY KEY  AUTOINCREMENT   NOT NULL,
-               update_time           TEXT    NOT NULL,
-               name             TEXT    NOT NULL,
-               fund_id          TEXT    NOT NULL,
-               detail_info_json TEXT    NOT NULL
-              
-               );''')
-    print("Table created successfully")
-    conn.commit()
-    conn.close()
-
-
 if __name__ == "__main__":
     # main()
     # create_table_valid_funds()
     # import_valid_funds_data_file2db()
-    export_valid_funds_list_db2file()
+    tool_export_valid_funds_list_db2file()
     # print(f"{2.2%1}")
 
     # 创建数据库

@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# _*_ coding: utf-8 _*_
+# @Time : 2022/3/14 21:23
+# @Author : dodo
+# @Version：V 0.1
+# @desc :  对数据库funds_detail.db进行管理
+
 import sqlite3
 
 import json
@@ -5,7 +12,10 @@ from fm_utils.utils import read_json_file, dict_only_get, dict_set
 
 
 def create_table_funds_detail():
-    # 创建一个名为funds_detail.db的数据库
+    """
+    创建一个名为funds_detail.db的数据库
+    :return:
+    """
     conn: sqlite3.Connection = sqlite3.connect('funds_detail.db')
     print("Opened database successfully")
 
@@ -26,7 +36,10 @@ def create_table_funds_detail():
 
 
 def import_funds_detail_file2db():
-    # 将数据从文件导入到数据库
+    """
+    将数据从文件导入到数据库
+    :return:
+    """
     data_list_will_import_to_db: list = []
 
     valid_funds_dict = read_json_file("./json/valid_funds.json")

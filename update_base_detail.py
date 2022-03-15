@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# _*_ coding: utf-8 _*_
+# @Time : 2022/3/14 21:23
+# @Author : dodo
+# @Version：V 0.1
+# @desc :  定期更新净值数据
+
 import multiprocessing as mp
 
 import js2py

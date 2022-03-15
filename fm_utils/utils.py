@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# _*_ coding: utf-8 _*_
+# @Time : 2022/3/14 21:23
+# @Author : dodo
+# @Version：V 0.1
+# @desc :  工具类
+
 import json
 import time
 
@@ -232,6 +239,11 @@ def bytes2str_2(ori_bytes: bytes, the_encoding: str = 'utf-8') -> str:
 
 
 def pro_int(a: float):
+    """
+    将float优先转换为int, 如果其本身就是整数的情况下
+    :param a:
+    :return:
+    """
     if a % 1 == 0:
         return int(a)
 

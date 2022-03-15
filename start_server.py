@@ -1,19 +1,27 @@
+#!/usr/bin/env python
+# _*_ coding: utf-8 _*_
+# @Time : 2022/3/14 21:23
+# @Author : dodo
+# @Version：V 0.1
+# @desc :  入口脚本
 from gevent import monkey
-
-import history_total_jinzhi_db_mgr
-import valid_funds_db_mgr
-from fm_utils.utils import dict_set, write_json_file_breakline, dict_only_get, get_current_time, dict_get, print_2_file, time_str2int, time_int2str
 
 monkey.patch_all()
 
+import os
+import newest_jinzhi_mgr
+import peak_valley_mgr
+
+import threading
+import requests
+import json
 import bottle
 
-import json
-import requests
-import threading
+import valid_funds_db_mgr
+from fm_utils.utils import dict_set, write_json_file_breakline, dict_only_get, get_current_time, dict_get, print_2_file, time_str2int, time_int2str, read_json_file
 
 global_funds_gz_infos: dict = {}
-global_valid_funds_dict: dict = {}
+global_valid_funds_base_info_dict: dict = {}
 
 # 包含成交量和成交额的场内基金数据
 global_inner_funds_advance_info_dict: dict = {}
@@ -30,7 +38,7 @@ def jsonpgz(the_fund_gz_info=None):
 
 
 def base_jsonpgz(the_fund_id: str, the_fund_gz_info: dict = None):
-    the_base_info: list = dict_only_get(global_valid_funds_dict, the_fund_id)
+    the_base_info: list = dict_only_get(global_valid_funds_base_info_dict, the_fund_id)
 
     the_fund_name: str = the_base_info[0]
     the_fund_type: str = the_base_info[1]
@@ -48,7 +56,7 @@ def base_jsonpgz(the_fund_id: str, the_fund_gz_info: dict = None):
 
     # the_pingzhongdata_info: dict = read_json_file(f"./pingzhongdata/{the_fund_id}.json")
     # Data_ACWorthTrend_list: list = dict_only_get(the_pingzhongdata_info, "Data_ACWorthTrend")
-    history_total_jinzhi_list: list = history_total_jinzhi_db_mgr.get_history_total_jinzhi_list(the_fund_id)
+    # history_total_jinzhi_list: list = history_total_jinzhi_db_mgr.get_history_total_jinzhi_list(the_fund_id)
 
     if the_fund_gz_info is None:
         the_fund_gz_info: dict = {}
@@ -80,55 +88,51 @@ def base_jsonpgz(the_fund_id: str, the_fund_gz_info: dict = None):
         dwjz_float: float = float(dwjz_str)
         guzhi_delta = dwjz_float * gszzl_float
 
-    (jinzhi_vp_rate, guzhi_vp_rate) = calc_peak_valley_rate(the_fund_id, history_total_jinzhi_list, guzhi_delta)
-    dict_set(the_fund_gz_info, "jinzhi_vp_rate", jinzhi_vp_rate)
-    dict_set(the_fund_gz_info, "guzhi_vp_rate", guzhi_vp_rate)
+    time_int, total_jingzhi = newest_jinzhi_mgr.get_newest_jinzhi(the_fund_id)
+    # 20:00-次日9:30 当日净值更新,
+    # 9:30-20:00 估值更新, 净值未更新
+
+    jzrq: str = dict_only_get(the_fund_gz_info, "jzrq")
+    if jzrq is None:
+        # 净值日期数据不存在
+        vp_rate_200, vp_rate_100 = peak_valley_mgr.calc_peak_valley_rate(the_fund_id, float(total_jingzhi) + guzhi_delta)
+        dict_set(the_fund_gz_info, "vp_rate_200", vp_rate_200)
+        dict_set(the_fund_gz_info, "vp_rate_100", vp_rate_100)
+
+        dict_set(global_funds_gz_infos, the_fund_id, the_fund_gz_info)
+        return
+
+    jzrq_int: int = time_str2int(jzrq, "%Y-%m-%d")
+    if time_int - jzrq_int > 40000:
+        vp_rate_200, vp_rate_100 = peak_valley_mgr.calc_peak_valley_rate(the_fund_id, float(total_jingzhi))
+
+        log_str: str = f"{get_current_time()} calc_vp {the_fund_id}, time_int:{time_int2str(time_int, '%Y%m%d_%H%M%S')}, total_jingzhi:{total_jingzhi}, the_fund_gz_info:{the_fund_gz_info}"
+        print_2_file("./log/calc_vp.log", log_str)
+    else:
+        vp_rate_200, vp_rate_100 = peak_valley_mgr.calc_peak_valley_rate(the_fund_id, float(total_jingzhi) + guzhi_delta)
+
+    dict_set(the_fund_gz_info, "vp_rate_200", vp_rate_200)
+    dict_set(the_fund_gz_info, "vp_rate_100", vp_rate_100)
 
     dict_set(global_funds_gz_infos, the_fund_id, the_fund_gz_info)
 
 
-def calc_peak_valley_rate(fund_id: str, jinzhi_history_list: list, guzhi_delta: float) -> (int, int):
-    # 取近200条数据, 从低到高排列, 90%位置定义为100, 10%位置定义为0, 计算净值所处位置和估值所处位置
-    if len(jinzhi_history_list) < 200:
-        flag: int = -10000 - len(jinzhi_history_list)
-        return (flag, flag)
-
-    jinzhi: float = jinzhi_history_list[-1][1]
-    guzhi: float = jinzhi + guzhi_delta
-    last_200_list: list = jinzhi_history_list[-200:]
-    trim_data(fund_id, last_200_list)
-
-    last_200_list.sort(key=sort_key)
-    valley: float = last_200_list[20][1]
-    peak: float = last_200_list[180][1]
-    unit: float = (peak - valley) / 100
-    if unit <= 0:
-        log_str: str = f"{get_current_time()} unit_error! the_fund_id:{fund_id}, peak:{last_200_list[180]}, valley:{last_200_list[20]}"
-        print_2_file("./log/start_server.log", log_str)
-        return (-20000, -20000)
-
-    return int((jinzhi - valley) / unit), int((guzhi - valley) / unit)
-
-
-def trim_data(fund_id: str, last_200_list: list):
-    # 将200日累计净值中的空数据擦除
-    last_jz: float = 1
-    for the_info in last_200_list:
-        if the_info[1] is None:
-            print(f"{get_current_time()} trim_data! the_fund_id:{fund_id}, the_info:{the_info}")
-            the_info[1] = last_jz
-        else:
-            last_jz = the_info[1]
-
-
-def sort_key(elem: list):
-    return elem[1]
-
-
 def start_monitor():
-    global global_valid_funds_dict
-    global_valid_funds_dict = valid_funds_db_mgr.get_all_valid_funds_dict()
-    print(f"{len(global_valid_funds_dict)}")
+    global global_valid_funds_base_info_dict
+    global global_funds_gz_infos
+    global global_inner_funds_advance_info_dict
+
+    global_valid_funds_base_info_dict = valid_funds_db_mgr.get_all_valid_funds_info_dict()
+    print(f"len(global_valid_funds_dict):{len(global_valid_funds_base_info_dict)}")
+
+    # 对global_funds_gz_infos, global_inner_funds_advance_info_dict进行初始化
+    file_path: str = "json/global_funds_gz_infos.json"
+    if os.access(file_path, os.F_OK):
+        global_funds_gz_infos = read_json_file(file_path)
+
+    file_path: str = "json/global_inner_funds_advance_info_dict.json"
+    if os.access(file_path, os.F_OK):
+        global_inner_funds_advance_info_dict = read_json_file(file_path)
 
     while True:
         monitor_once()
@@ -158,6 +162,11 @@ def refresh_inner_funds_advance_info():
 
 
 def inner_funds_callback(the_dict: dict):
+    """
+    处理场内基金的相关数据
+    :param the_dict: the_dict
+    :return:
+    """
     the_data: dict = dict_only_get(the_dict, "data")
     the_diff_list: list[dict] = dict_only_get(the_data, "diff")
     print(f"{get_current_time()}, inner_funds_callback, len_the_diff_list:{len(the_diff_list)}")
@@ -166,7 +175,7 @@ def inner_funds_callback(the_dict: dict):
         dict_set(global_inner_funds_advance_info_dict, the_fund_id, the_info)
 
 
-def refresh_base_time() -> (str, str):
+def refresh_base_time() -> tuple[str, str]:
     monitor_the_fund("000001")
     monitor_the_fund("000006")
     monitor_the_fund("000008")
@@ -196,17 +205,19 @@ def refresh_base_time() -> (str, str):
 
 
 def monitor_once():
+    newest_jinzhi_mgr.refresh_all_jinzhi()
+
     max_jzrq, max_gztime = refresh_base_time()
     refresh_inner_funds_advance_info()
     inner_funds_id_list = global_inner_funds_advance_info_dict.keys()
-    valid_funds_id_list = global_valid_funds_dict.keys()
+    valid_funds_id_list = global_valid_funds_base_info_dict.keys()
     # 优先处理场内基金的相关数据
     for inner_fund_id in inner_funds_id_list:
         if inner_fund_id in valid_funds_id_list:
             jsonpgz_inner_fund(inner_fund_id, max_jzrq, max_gztime)
             continue
 
-    for the_fund_id in global_valid_funds_dict:
+    for the_fund_id in global_valid_funds_base_info_dict:
         if the_fund_id in inner_funds_id_list:
             continue
         try:
@@ -215,16 +226,15 @@ def monitor_once():
             log_str: str = f"{get_current_time()} exception! cur_fund_id:{the_fund_id}, e:{e}"
             print_2_file("./log/start_server_exception.log", log_str)
 
-            "http://api.fund.eastmoney.com/f10/lsjz?callback=jQuery1830918132396245753_1646741041057&fundCode=000001&pageIndex=1&pageSize=20&startDate=&endDate=&_=1646741041074"
-
 
 def jsonpgz_inner_fund(the_fund_id: str, max_jzrq: str, max_gztime: str):
-    the_fund_base_info_list: list = dict_only_get(global_valid_funds_dict, the_fund_id)
+    # todo 需要给场内基金添加标签
+    the_fund_base_info_list: list = dict_only_get(global_valid_funds_base_info_dict, the_fund_id)
     the_inner_fund_advance_info: dict = dict_only_get(global_inner_funds_advance_info_dict, the_fund_id)
 
     the_name: str = the_fund_base_info_list[0]
     # 昨收单位净值
-    yestoday_jz: float = dict_only_get(the_inner_fund_advance_info, "f18")
+    yesterday_jinzhi: float = dict_only_get(the_inner_fund_advance_info, "f18")
     # 当前最新价
     cur_gz: float = dict_only_get(the_inner_fund_advance_info, "f2")
     cur_gz_rate: float = dict_only_get(the_inner_fund_advance_info, "f3")
@@ -235,7 +245,7 @@ def jsonpgz_inner_fund(the_fund_id: str, max_jzrq: str, max_gztime: str):
     dict_set(the_fund_gz_info, "fundcode", the_fund_id)
     dict_set(the_fund_gz_info, "name", the_name)
     dict_set(the_fund_gz_info, "jzrq", max_jzrq)
-    dict_set(the_fund_gz_info, "dwjz", yestoday_jz)
+    dict_set(the_fund_gz_info, "dwjz", yesterday_jinzhi)
     dict_set(the_fund_gz_info, "gsz", cur_gz)
     dict_set(the_fund_gz_info, "gszzl", cur_gz_rate)
     dict_set(the_fund_gz_info, "gztime", max_gztime)
@@ -272,10 +282,11 @@ def get_fund():
 @bottle.route('/editTags', method='GET')
 def edit_tags():
     # 修改标签
+    # todo 制作忽略功能, 还有合并功能
     fund_id: str = bottle.request.query.fund_id
     new_tags_str: str = bottle.request.query.new_tags
 
-    the_base_info: list = dict_only_get(global_valid_funds_dict, fund_id)
+    the_base_info: list = dict_only_get(global_valid_funds_base_info_dict, fund_id)
     if the_base_info is None or new_tags_str is None:
         # 参数检验
         return f"edit_tags failed, {fund_id}, {new_tags_str}"
@@ -309,10 +320,10 @@ if __name__ == "__main__":
 
 ########################################################################################################################################################
 ########################################################################################################################################################
-def read_fenzu_list(id: str):
+def read_fenzu_list(the_id: str):
     with open("./json/fenzu.json", "r", encoding="utf-8") as f:
         fenzu_data: dict = json.load(f)
-        zu_obj: dict = fenzu_data.get(id)
+        zu_obj: dict = fenzu_data.get(the_id)
 
         # 分组暂时通过后台json分组, 前台直接分组的功能暂缓
         # 重要的量化指标 最高点与最低点之间指数, 以最低点为0, 最高点为100, 计算当前指数, N天以来最高, M天以来最低, 连续X天上涨/下跌

@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# _*_ coding: utf-8 _*_
+# @Time : 2022/3/14 21:23
+# @Author : dodo
+# @Version：V 0.1
+# @desc :  对数据库history_total_jinzhi进行管理
+
 import sqlite3
 import time
 
@@ -69,6 +76,11 @@ def get_history_total_jinzhi_list(fund_id) -> list:
 
 
 def get_update_time(fund_id) -> str:
+    """
+    从数据库中获取当前基金的更新时间
+    :param fund_id: 基金id
+    :return: update_time
+    """
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
     new_cursor = cursor.execute(f"SELECT update_time FROM {table_name} WHERE fund_id = '{fund_id}' ")
