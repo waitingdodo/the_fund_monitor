@@ -12,7 +12,7 @@ import requests
 
 import history_total_jinzhi_db_mgr
 import valid_funds_db_mgr
-from fm_utils.utils import get_current_time, dict_set, dict_only_get
+from dz_utils.dz_utils import get_current_time, dict_set, dict_only_get
 
 
 def main():

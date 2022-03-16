@@ -9,7 +9,7 @@ import sqlite3
 import time
 
 import json
-from fm_utils.utils import read_json_file, dict_only_get, time_str2int, get_current_time
+from dz_utils.dz_utils import read_json_file, dict_only_get, time_str2int, get_current_time
 
 db_name: str = 'history_total_jinzhi.db'
 table_name: str = 'history_total_jinzhi'

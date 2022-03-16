@@ -11,7 +11,7 @@ import requests
 
 import history_total_jinzhi_db_mgr
 import valid_funds_db_mgr
-from fm_utils.utils import dict_only_get, write_file, dict_set, write_json_file_breakline, read_json_file, time_int2str, time_str2int
+from dz_utils.dz_utils import dict_only_get, write_file, dict_set, write_json_file_breakline, read_json_file, time_int2str, time_str2int
 
 
 def tool_init_newest_jinzhi_to_file():

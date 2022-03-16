@@ -8,7 +8,7 @@
 import sqlite3
 
 import json
-from fm_utils.utils import read_json_file, dict_only_get, dict_set
+from dz_utils.dz_utils import read_json_file, dict_only_get, dict_set
 
 
 def create_table_funds_detail():

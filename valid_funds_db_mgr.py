@@ -8,7 +8,7 @@
 import os
 import sqlite3
 
-from fm_utils.utils import read_json_file, get_current_time, dict_only_get, write_json_file_breakline, dict_set, pro_int
+from dz_utils.dz_utils import read_json_file, get_current_time, dict_only_get, write_json_file_breakline, dict_set, pro_int
 
 db_name: str = 'funds.db'
 

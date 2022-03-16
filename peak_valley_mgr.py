@@ -8,7 +8,7 @@
 # @desc : 用于管理计算峰谷值时所需要的参数, 每隔10天更新一次
 import history_total_jinzhi_db_mgr
 import valid_funds_db_mgr
-from fm_utils.utils import get_current_time, dict_set, write_json_file_breakline, read_json_file, dict_only_get, print_2_file
+from dz_utils.dz_utils import get_current_time, dict_set, write_json_file_breakline, read_json_file, dict_only_get, print_2_file
 
 
 def tool_init_params_to_file():
