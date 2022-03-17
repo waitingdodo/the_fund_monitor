@@ -228,7 +228,7 @@ def monitor_once():
 
 
 def jsonpgz_inner_fund(the_fund_id: str, max_jzrq: str, max_gztime: str):
-    # todo 需要给场内基金添加标签
+    # todo 需要给场内基金添加标签, 封闭的基金, 暂停的基金, 也需要打上自动标签
     the_fund_base_info_list: list = dict_only_get(global_valid_funds_base_info_dict, the_fund_id)
     the_inner_fund_advance_info: dict = dict_only_get(global_inner_funds_advance_info_dict, the_fund_id)
 

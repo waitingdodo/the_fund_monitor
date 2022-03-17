@@ -11,10 +11,14 @@ import requests
 
 import history_total_jinzhi_db_mgr
 import valid_funds_db_mgr
-from dz_utils.dz_utils import dict_only_get, write_file, dict_set, write_json_file_breakline, read_json_file, time_int2str, time_str2int
+from dz_utils.dz_utils import dict_only_get, write_file, dict_set, write_json_file_breakline, read_json_file, time_int2str, time_str2int, is_number
 
 
 def tool_init_newest_jinzhi_to_file():
+    """
+    只有最开始从数据库中生成json文件时, 才会使用该方法
+    :return:
+    """
     newest_jinzhi_dict: dict = {}
     valid_fund_id_list: list[str] = valid_funds_db_mgr.get_all_valid_funds_id_list()
     for the_fund_id in valid_fund_id_list:
@@ -80,12 +84,12 @@ def update_jinzhi(datas_list: list, yesterday_timestamp: int, former_timestamp: 
         # former_unit_jinzhi: str = the_data[5]
         former_total_jinzhi: str = the_data[6]
 
-        if str.isnumeric(yesterday_total_jinzhi):
+        if is_number(yesterday_total_jinzhi):
             yesterday_time_str: str = time_int2str(yesterday_timestamp, '%Y%m%d_%H%M%S')
             dict_set(global_newest_jinzhi_dict, fund_id, [yesterday_time_str, float(yesterday_total_jinzhi)])
             continue
 
-        if str.isnumeric(former_total_jinzhi):
+        if is_number(former_total_jinzhi):
             former_time_str: str = time_int2str(former_timestamp, '%Y%m%d_%H%M%S')
             dict_set(global_newest_jinzhi_dict, fund_id, [former_time_str, float(former_total_jinzhi)])
             continue
@@ -107,4 +111,5 @@ def get_newest_jinzhi(fund_id: str) -> (int, float):
 
 if __name__ == '__main__':
     # fix_timestamp_to_file()
+    refresh_all_jinzhi()
     pass

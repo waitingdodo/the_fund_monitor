@@ -12,6 +12,11 @@ import chardet
 
 
 def is_number(s: str) -> bool:
+    """
+    检测字符串是否为数字
+    :param s:
+    :return:
+    """
     try:
         float(s)
         return True
@@ -50,6 +55,12 @@ def time_str2int(ori_time_str: str, ori_format: str) -> int:
 
 
 def time_int2str(ori_time_stamp: float, format: str):
+    """
+    将int型时间戳转为指定格式的字符串
+    :param ori_time_stamp:
+    :param format:
+    :return:
+    """
     time_struct = time_int2struct(ori_time_stamp)
     time_str: str = time_struct2str(time_struct, format)
     return time_str
